@@ -1,0 +1,1688 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Automaten — Schaltwerke, Automatengraphen & Simulation</title>
+
+<!-- KaTeX für professionelle LaTeX-Formeldarstellung (Fallback vorhanden) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" onload="if(window.__katexReady)window.__katexReady()"></script>
+
+<style>
+  :root {
+    --accent: #2563eb;
+    --accent-hover: #1d4ed8;
+    --ink: #1e293b;
+    --muted: #64748b;
+    --line: #cbd5e1;
+    --bg: #f8fafc;
+    --card-bg: #ffffff;
+    --green: #16a34a;
+    --amber: #d97706;
+    --red: #dc2626;
+    --purple: #7048e8;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  header {
+    background: var(--card-bg);
+    border-bottom: 1px solid var(--line);
+    padding: 12px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    z-index: 10;
+  }
+  header h1 { font-size: 17px; margin: 0; font-weight: 700; color: #0f172a; }
+  header .sub { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+  header .right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .hdr-select {
+    font: 12.5px "Segoe UI", sans-serif;
+    padding: 6px 10px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--ink);
+    cursor: pointer;
+    font-weight: 500;
+  }
+  .hdr-select:focus { border-color: var(--accent); outline: none; }
+
+  .wrap { flex: 1; display: flex; gap: 16px; padding: 16px; min-height: 0; }
+  aside { width: 390px; flex: none; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; padding-right: 4px; }
+
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  }
+  .card h2 {
+    font-size: 12.5px;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 4px;
+    font-weight: 700;
+  }
+  .card-subhint { font-size: 12px; color: #475569; margin-bottom: 10px; line-height: 1.4; }
+
+  .seg { display: flex; background: #f1f5f9; border-radius: 9px; padding: 3px; gap: 3px; margin-top: 8px; }
+  .seg button {
+    flex: 1; border: 0; background: transparent; padding: 7px 4px; border-radius: 7px;
+    font: 12.5px "Segoe UI", sans-serif; color: var(--muted); cursor: pointer; transition: all 0.15s;
+  }
+  .seg button.active { background: #fff; color: var(--ink); font-weight: 650; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+  .tabpage { display: none; }
+  .tabpage.active { display: block; }
+
+  label.fieldlabel { display: block; font-size: 12.5px; font-weight: 600; color: var(--ink); margin: 12px 0 5px; }
+  input[type=text], select.field, textarea.field {
+    width: 100%; font: 13px/1.5 Consolas, monospace; padding: 9px 11px;
+    border: 1.5px solid var(--line); border-radius: 8px; background: #fff; color: var(--ink); outline: none;
+  }
+  textarea.field { resize: vertical; min-height: 120px; }
+  input[type=text]:focus, select.field:focus, textarea.field:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+
+  .dims { display: flex; gap: 10px; }
+  .dims > div { flex: 1; }
+  .dims select { width: 100%; }
+
+  .fnrow { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+  .fnrow .fnlab { font: 600 13.5px Consolas, monospace; flex: none; width: 52px; text-align: right; }
+  .fnrow input { flex: 1; }
+  .ops { display: flex; flex-wrap: wrap; gap: 5px; margin: 10px 0 2px; }
+  .ops button {
+    min-width: 30px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 7px;
+    background: #fafbfd; font: 14px Georgia, serif; cursor: pointer; color: var(--ink); transition: all .15s ease;
+  }
+  .ops button:hover { background: #eef2fb; border-color: #c9d4ee; }
+  .fnprev { margin: 3px 0 2px 60px; font-size: 13.5px; overflow-x: auto; min-height: 0; }
+  .fnprev .katex { font-size: 1.05em; }
+  .fnprev .preverr { color: var(--red); font-size: 11.5px; font-family: "Segoe UI", sans-serif; font-style: normal; }
+
+  .status { font-size: 12.5px; margin-top: 10px; min-height: 18px; display: flex; align-items: center; gap: 6px; font-weight: 500; }
+  .status.ok { color: var(--green); } .status.bad { color: var(--red); } .status.muted { color: var(--muted); }
+  .hint { font-size: 11.5px; color: #64748b; margin-top: 8px; line-height: 1.55; }
+  .hint code { background: #f1f5f9; padding: 1px 5px; border-radius: 4px; font-size: 11px; color: #334155; }
+
+  .main {
+    flex: 1; display: flex; flex-direction: column;
+    background: var(--card-bg); border: 1px solid var(--line); border-radius: 12px;
+    min-width: 0; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  }
+  .caption {
+    padding: 14px 24px; border-bottom: 1px solid var(--line);
+    display: flex; justify-content: space-between; align-items: center; gap: 16px; min-height: 64px;
+  }
+  .captitle { font-size: 16px; font-weight: 700; }
+  .capdesc { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .stage {
+    flex: 1; min-height: 0; overflow: auto; padding: 24px;
+    background-image: radial-gradient(#e2e8f0 1.2px, transparent 1.2px);
+    background-size: 24px 24px;
+    background-color: var(--bg);
+  }
+  #steps { max-width: 980px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+
+  .step {
+    background: #fff; border: 1px solid var(--line); border-radius: 12px;
+    padding: 14px 20px 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    animation: pop .22s ease;
+  }
+  .step.result { border: 1.5px solid var(--accent); box-shadow: 0 2px 8px rgba(37,99,235,0.12); }
+  @keyframes pop { from { transform: scale(.985); opacity: .4; } to { transform: scale(1); opacity: 1; } }
+  .stephead { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .stepnum {
+    width: 24px; height: 24px; flex: none; border-radius: 50%;
+    background: var(--accent); color: #fff; font-size: 12.5px; font-weight: 700;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .step.result .stepnum { background: var(--green); }
+  .steptitle { font-size: 14px; font-weight: 700; }
+  .stepbody { font-size: 13px; line-height: 1.6; color: #334155; }
+  .stepbody b { color: var(--ink); }
+
+  .mono { font-family: Consolas, monospace; }
+  .ov { border-top: 1.5px solid currentColor; display: inline-block; line-height: 1.15; }
+  .formula { font-size: 14px; margin: 6px 0; }
+  .formula .katex { font-size: 1.12em; }
+  .formula sub, .wtab sub { font-size: 10px; }
+  .fdef { color: var(--accent); font-weight: 700; }
+  .math-fallback { font-family: "Times New Roman", Georgia, serif; font-style: italic; }
+  .setline { font-size: 13.5px; margin: 5px 0; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .setline .katex { font-size: 1.08em; }
+  .setline .expl { color: var(--muted); font-size: 12px; }
+
+  table.wtab { border-collapse: collapse; font: 13px Consolas, monospace; margin: 8px 0 4px; }
+  table.wtab td, table.wtab th { border: 1px solid var(--line); padding: 4px 10px; text-align: center; }
+  table.wtab th { background: #f1f5f9; font-weight: 600; font-size: 12px; }
+  table.wtab tr.blocksep td { border-top: 2.5px solid #94a3b8; }
+  table.wtab td.dsep { border-left: 2.5px double #94a3b8; }
+  table.wtab td.hl { background: #dbeafe; font-weight: 700; }
+  table.wtab td.undef { color: var(--muted); }
+
+  /* editierbare Tabelle in der Sidebar */
+  table.etab { border-collapse: collapse; font: 12.5px Consolas, monospace; margin: 8px 0 2px; width: 100%; }
+  table.etab td, table.etab th { border: 1px solid var(--line); padding: 3px 4px; text-align: center; }
+  table.etab th { background: #f1f5f9; font-weight: 600; font-size: 11px; }
+  table.etab td.fix { color: var(--muted); background: #f8fafc; }
+  table.etab td.edit { cursor: pointer; font-weight: 700; user-select: none; }
+  table.etab td.edit:hover { background: #eff6ff; }
+  table.etab td.edit.v1 { color: var(--accent); }
+  table.etab td.edit.vd { color: var(--amber); }
+  table.etab tr.blocksep td { border-top: 2px solid #94a3b8; }
+
+  /* KV-Diagramm */
+  table.kvt { border-collapse: collapse; font: 13.5px Consolas, monospace; margin: 8px 12px 8px 0; display: inline-table; vertical-align: top; }
+  table.kvt td, table.kvt th { border: 1px solid #94a3b8; padding: 0; text-align: center; }
+  table.kvt th { background: #f1f5f9; font: 600 11px "Segoe UI", sans-serif; padding: 3px 7px; border-color: transparent; background: transparent; }
+  table.kvt td { width: 44px; height: 40px; position: relative; background: #fff; }
+  table.kvt td .kvv { font-weight: 700; font-size: 14px; }
+  table.kvt td .kvi { position: absolute; left: 3px; bottom: 1px; font-size: 9px; color: #94a3b8; }
+  table.kvt td.dcc .kvv { color: var(--amber); }
+
+  .kvlegend { display: flex; flex-direction: column; gap: 4px; margin: 6px 0; }
+  .kvlegend .li { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
+  .kvlegend .sw { width: 18px; height: 14px; border-radius: 4px; flex: none; border: 2px solid; }
+
+  pre.gcode { font: 13px/1.6 Consolas, monospace; background: #f8fafc; border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; margin: 6px 0 2px; overflow-x: auto; }
+
+  .placeholder { text-align: center; color: var(--muted); font-size: 13.5px; padding: 60px 20px; }
+  .placeholder .big { font-size: 40px; margin-bottom: 12px; }
+
+  .note { font-size: 12px; color: var(--muted); background: #f8fafc; border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; margin-top: 8px; line-height: 1.5; }
+  .note.warn { background: #fffbeb; border-color: #fde68a; color: #92400e; }
+  .note .ov { border-top-width: 1px; }
+
+  .svgbox { background: #fff; border: 1px solid var(--line); border-radius: 8px; margin-top: 8px; overflow-x: auto; }
+  .svgbox svg { display: block; margin: 0 auto; }
+
+  .badge { display: inline-block; font: 700 12px "Segoe UI", sans-serif; padding: 2px 10px; border-radius: 999px; background: #dbeafe; color: var(--accent); }
+
+  @media (max-width: 900px) {
+    html, body { height: auto; }
+    body { overflow: auto; }
+    header { padding: 10px 14px; }
+    header h1 { font-size: 15px; }
+    .wrap { flex-direction: column; padding: 10px; gap: 12px; }
+    aside { width: 100%; overflow: visible; padding-right: 0; }
+    .main { flex: none; overflow: visible; }
+    .caption { padding: 10px 14px; min-height: 0; flex-wrap: wrap; }
+    .stage { overflow: visible; padding: 12px; }
+    .step { padding: 12px 14px 14px; overflow-x: auto; }
+    input[type=text], select, textarea { font-size: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Automaten &amp; Schaltwerke</h1>
+    <div class="sub">Automatentabelle • Automatengraph • Mealy/Moore/Medvedev • KV-Minimierung • Schaltwerk • Simulation — Schritt für Schritt wie in der Klausur</div>
+  </div>
+  <div class="right">
+    <select id="examples" class="hdr-select">
+      <option value="">Beispiel laden…</option>
+    </select>
+  </div>
+</header>
+
+<div class="wrap">
+  <aside>
+    <div class="card">
+      <h2>Dimensionen</h2>
+      <div class="dims">
+        <div>
+          <label class="fieldlabel">Eingabebits</label>
+          <select class="field" id="selNx"><option value="1" selected>1 (x)</option><option value="2">2 (x₁,x₀)</option></select>
+        </div>
+        <div>
+          <label class="fieldlabel">Flipflops</label>
+          <select class="field" id="selNz"><option value="1">1 (z)</option><option value="2" selected>2 (z₁,z₀)</option><option value="3">3 (z₂,z₁,z₀)</option></select>
+        </div>
+        <div>
+          <label class="fieldlabel">Ausgabebits</label>
+          <select class="field" id="selNy"><option value="1" selected>1 (y)</option><option value="2">2 (y₁,y₀)</option><option value="3">3 (y₂,y₁,y₀)</option></select>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Eingabe</h2>
+      <div class="seg" id="modeSeg">
+        <button data-mode="fn" class="active">Funktionen</button>
+        <button data-mode="tab">Tabelle</button>
+        <button data-mode="graph">Graph</button>
+      </div>
+
+      <!-- ── Tab 1: Funktionen ── -->
+      <div class="tabpage active" id="pgFn">
+        <div class="card-subhint" style="margin-top:10px">Übergangsfunktionen z⁺ und Ausgabefunktion(en) y als boolesche Formeln — wie sie aus einem Schaltplan abgelesen werden.</div>
+        <div class="ops" id="fnOps"></div>
+        <div id="fnFields"></div>
+        <div class="status muted" id="stFn"></div>
+        <div class="hint">Operatoren: <code>~</code> NOT (auch <code>z0'</code>), <code>&amp;</code> AND (oder einfach nebeneinander: <code>~x z1 ~z0</code>), <code>|</code> OR, <code>^</code> XOR. Variablen: <code>x</code>, <code>x1</code>, <code>x0</code>, <code>z0</code>…<code>z2</code>. Auch <code>¬ ∧ ∨ ⊕</code> möglich.</div>
+      </div>
+
+      <!-- ── Tab 2: Tabelle ── -->
+      <div class="tabpage" id="pgTab">
+        <div class="card-subhint" style="margin-top:10px">Automatentabelle direkt ausfüllen: Zellen anklicken, um <b>0 → 1 → −</b> (don't care) zu wechseln.</div>
+        <div id="editTableWrap" style="overflow-x:auto"></div>
+        <div class="status muted" id="stTab"></div>
+      </div>
+
+      <!-- ── Tab 3: Graph ── -->
+      <div class="tabpage" id="pgGraph">
+        <div class="card-subhint" style="margin-top:10px">Automatengraph als Kantenliste — eine Kante pro Zeile.</div>
+        <label class="fieldlabel" for="inGraph">Kantenliste</label>
+        <textarea class="field" id="inGraph" spellcheck="false" rows="10"></textarea>
+        <div class="status muted" id="stGraph"></div>
+        <div class="hint">
+          Mealy-Kante: <code>s0, 1 -&gt; s1 / 0</code> &nbsp;(Zustand, Eingabe → Folgezustand / Ausgabe)<br>
+          Moore: Ausgabe am Zustand deklarieren: <code>s2: 111</code>, Kanten dann ohne <code>/…</code><br>
+          Eingabe-Wildcard: <code>-</code> (z.&nbsp;B. <code>s0, -0 -&gt; s1 / 1</code>). Zustandscodes: <code>s0=00</code> oder Binärnamen (<code>00, 01, …</code>). Kommentare mit <code>#</code>.
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Simulation</h2>
+      <div class="card-subhint">Eingabesequenz Takt für Takt durchlaufen — wie „Ausgabe y im 6. Takt“ in der Klausur.</div>
+      <label class="fieldlabel" for="inStart">Startzustand (Initialisierung der Flipflops)</label>
+      <input type="text" id="inStart" value="00" spellcheck="false" autocomplete="off">
+      <label class="fieldlabel" for="inSeq">Eingabesequenz (x pro Takt, durch Leerzeichen)</label>
+      <input type="text" id="inSeq" value="" placeholder="z. B. 0 0 0 1 1 0" spellcheck="false" autocomplete="off">
+      <div class="status muted" id="stSim"></div>
+      <div class="hint">Bei 2 Eingabebits pro Takt beide Bits angeben: <code>x₁x₀</code>, z.&nbsp;B. <code>00 10 11</code>. Leer lassen ⇒ keine Simulation.</div>
+    </div>
+
+    <div class="card">
+      <h2>Anzeige</h2>
+      <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;margin-top:6px;cursor:pointer">
+        <input type="checkbox" id="chkKV" checked> KV-Diagramme &amp; Minimierung anzeigen
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;margin-top:6px;cursor:pointer">
+        <input type="checkbox" id="chkPLA" checked> Schaltwerk (UND/ODER-Matrix + D-Flipflops) zeichnen
+      </label>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="caption">
+      <div>
+        <div class="captitle" id="capTitle">—</div>
+        <div class="capdesc" id="capDesc"></div>
+      </div>
+    </div>
+    <div class="stage">
+      <div id="steps"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* ════════════════════════════════════════════════════════════
+   CORE-START — DOM-freie Logik (Parser, Tabelle, Klassifikation,
+   Quine-McCluskey, Simulation). Bit-Konventionen:
+   - Belegungsindex a = (x << nz) | z   (z-Bits sind die niederwertigen)
+   - Bit b < nz  → z_b ;  Bit b >= nz → x_{b-nz}
+   ════════════════════════════════════════════════════════════ */
+
+/* ---------- 1. Boolescher Parser (adaptiert aus kv.html) ---------- */
+function tokenize(s){
+  const toks = []; let i = 0;
+  const uni = {"∧":"AND", "∨":"OR", "¬":"NOT", "⊕":"XOR", "·":"AND", "+":"OR"};
+  while(i < s.length){
+    const c = s[i];
+    if(/\s/.test(c)){ i++; continue; }
+    if(uni[c]){ toks.push({k:uni[c]}); i++; continue; }
+    if(c === '('){ toks.push({k:"LP"}); i++; continue; }
+    if(c === ')'){ toks.push({k:"RP"}); i++; continue; }
+    if(c === '~' || c === '!'){ toks.push({k:"NOT"}); i++; continue; }
+    if(c === "'"){ toks.push({k:"POST"}); i++; continue; }
+    if(c === '&' || c === '*'){ toks.push({k:"AND"}); i++; continue; }
+    if(c === '|'){ toks.push({k:"OR"}); i++; continue; }
+    if(c === '^'){ toks.push({k:"XOR"}); i++; continue; }
+    if((c === 'x' || c === 'z') && /\d/.test(s[i+1] || '')){
+      let j = i + 1; while(/\d/.test(s[j] || '')) j++;
+      toks.push({k:"VAR", g: c, idx: parseInt(s.slice(i+1, j), 10)}); i = j; continue;
+    }
+    if(c === 'x' || c === 'z'){ toks.push({k:"VAR", g: c, idx: 0}); i++; continue; }
+    if(/[01]/.test(c)){ toks.push({k:"CONST", v: +c}); i++; continue; }
+    throw new Error("Unerwartetes Zeichen: '" + c + "'");
+  }
+  return toks;
+}
+
+function parseExpr(str, nx, nz){
+  const t = tokenize(str); let p = 0;
+  const peek = () => t[p], eat = k => { if(!t[p] || t[p].k !== k) throw new Error("Syntaxfehler — Klammern prüfen"); return t[p++]; };
+  const atomStart = () => { const x = peek(); return x && (x.k === "VAR" || x.k === "CONST" || x.k === "LP" || x.k === "NOT"); };
+  function post(node){ while(peek() && peek().k === "POST"){ p++; node = {t:"not", a: node}; } return node; }
+  function atom(){
+    const x = peek();
+    if(!x) throw new Error("Ausdruck endet unerwartet");
+    if(x.k === "LP"){ p++; const e = orP(); eat("RP"); return post(e); }
+    if(x.k === "CONST"){ p++; return post({t:"const", v: x.v}); }
+    if(x.k === "VAR"){
+      if(x.g === 'x' && x.idx >= nx) throw new Error("Variable x" + x.idx + " existiert nicht (nur " + nx + " Eingabebit" + (nx>1?"s":"") + ")");
+      if(x.g === 'z' && x.idx >= nz) throw new Error("Variable z" + x.idx + " existiert nicht (nur " + nz + " Flipflop" + (nz>1?"s":"") + ")");
+      p++; return post({t:"var", g: x.g, i: x.idx});
+    }
+    throw new Error("Syntaxfehler bei einem Operator");
+  }
+  function notP(){ if(peek() && peek().k === "NOT"){ p++; return {t:"not", a: notP()}; } return atom(); }
+  /* exp: true = UND explizit getippt (& ∧ * ·), false = Nebeneinanderschreibung */
+  function andP(){ let l = notP(); while(peek() && (peek().k === "AND" || atomStart())){ let exp = false; if(peek().k === "AND"){ p++; exp = true; } l = {t:"and", a: l, b: notP(), exp}; } return l; }
+  function xorP(){ let l = andP(); while(peek() && peek().k === "XOR"){ p++; l = {t:"xor", a: l, b: andP()}; } return l; }
+  function orP(){ let l = xorP(); while(peek() && peek().k === "OR"){ p++; l = {t:"or", a: l, b: xorP()}; } return l; }
+  const ast = orP();
+  if(p !== t.length) throw new Error("Syntaxfehler — überzählige Zeichen am Ende");
+  return ast;
+}
+
+/* a = (x << nz) | z */
+function evalAst(node, a, nz){
+  switch(node.t){
+    case "const": return node.v;
+    case "var": return node.g === 'z' ? (a >> node.i) & 1 : (a >> (nz + node.i)) & 1;
+    case "not": return evalAst(node.a, a, nz) ? 0 : 1;
+    case "and": return (evalAst(node.a, a, nz) && evalAst(node.b, a, nz)) ? 1 : 0;
+    case "or":  return (evalAst(node.a, a, nz) || evalAst(node.b, a, nz)) ? 1 : 0;
+    case "xor": return (evalAst(node.a, a, nz) ^ evalAst(node.b, a, nz));
+  }
+  return 0;
+}
+
+/* ---------- 2. Normalform: rows[a] = {zn, y} (null = undefiniert) ---------- */
+function buildRowsFromFns(nx, nz, ny, zExprs, yExprs){
+  const zAst = zExprs.map(s => parseExpr(s, nx, nz));
+  const yAst = yExprs.map(s => parseExpr(s, nx, nz));
+  const rows = [];
+  for(let a = 0; a < (1 << (nx + nz)); a++){
+    let zn = 0, y = 0;
+    for(let i = 0; i < nz; i++) zn |= evalAst(zAst[i], a, nz) << i;
+    for(let i = 0; i < ny; i++) y  |= evalAst(yAst[i], a, nz) << i;
+    rows.push({zn, y});
+  }
+  return rows;
+}
+
+/* editModel: znBits[a][i], yBits[a][i]  mit 0 | 1 | null */
+function buildRowsFromEdit(nx, nz, ny, znBits, yBits){
+  const rows = [];
+  for(let a = 0; a < (1 << (nx + nz)); a++){
+    let zn = 0, y = 0, znDef = true, yDef = true;
+    for(let i = 0; i < nz; i++){ const v = znBits[a][i]; if(v === null) znDef = false; else zn |= v << i; }
+    for(let i = 0; i < ny; i++){ const v = yBits[a][i]; if(v === null) yDef = false; else y |= v << i; }
+    rows.push({zn: znDef ? zn : null, y: yDef ? y : null});
+  }
+  return rows;
+}
+
+/* Kantenliste → rows + Zustandsnamen. Wirft Error mit Zeilenangabe. */
+function parseGraph(text, nx, nz, ny){
+  const N = 1 << nz;
+  const nameToCode = new Map();   // Name → Code
+  const codeToName = new Map();   // Code → Name
+  const usedCodes = new Set();
+  const mooreOut = new Map();     // Code → y
+  const edges = [];               // {from, x, to, y|null, line}
+
+  function claim(name, code, lineNo){
+    if(usedCodes.has(code) && codeToName.get(code) !== name)
+      throw new Error("Zeile " + lineNo + ": Code " + code.toString(2).padStart(nz, "0") + " ist schon an „" + codeToName.get(code) + "“ vergeben");
+    nameToCode.set(name, code); codeToName.set(code, name); usedCodes.add(code);
+  }
+  function resolve(name, lineNo){
+    if(nameToCode.has(name)) return nameToCode.get(name);
+    // Binärcode als Name?
+    if(new RegExp("^[01]{" + nz + "}$").test(name)){ const c = parseInt(name, 2); claim(name, c, lineNo); return c; }
+    // sN → Code N, falls frei
+    const m = /^[sSqQ](\d+)$/.exec(name);
+    if(m && +m[1] < N && !usedCodes.has(+m[1])){ claim(name, +m[1], lineNo); return +m[1]; }
+    // nächster freier Code
+    for(let c = 0; c < N; c++) if(!usedCodes.has(c)){ claim(name, c, lineNo); return c; }
+    throw new Error("Zeile " + lineNo + ": zu viele Zustände — bei " + nz + " Flipflops sind maximal " + N + " möglich");
+  }
+
+  const lines = text.split(/\n/);
+  for(let li = 0; li < lines.length; li++){
+    const raw = lines[li].replace(/#.*$/, "").trim();
+    if(!raw) continue;
+    const lineNo = li + 1;
+    let m;
+    // Codezuweisung: name = 01
+    if((m = /^(\S+)\s*=\s*([01]+)\s*$/.exec(raw))){
+      if(m[2].length !== nz) throw new Error("Zeile " + lineNo + ": Code muss " + nz + " Bit haben");
+      claim(m[1], parseInt(m[2], 2), lineNo); continue;
+    }
+    // Kante: from , input -> to [/ output]
+    if(raw.includes("->") || raw.includes("→")){
+      const parts = raw.split(/->|→/);
+      if(parts.length !== 2) throw new Error("Zeile " + lineNo + ": genau ein „->“ erwartet");
+      const lm = /^(\S+)\s*[,;]\s*([01\-]+)\s*$/.exec(parts[0].trim());
+      if(!lm) throw new Error("Zeile " + lineNo + ": links vom „->“ wird „Zustand, Eingabe“ erwartet");
+      const rm = /^(\S+?)\s*(?:\/\s*([01]+)\s*)?$/.exec(parts[1].trim());
+      if(!rm) throw new Error("Zeile " + lineNo + ": rechts vom „->“ wird „Folgezustand [/ Ausgabe]“ erwartet");
+      const xs = lm[2];
+      if(xs.length !== nx) throw new Error("Zeile " + lineNo + ": Eingabe muss " + nx + " Bit haben (ist „" + xs + "“)");
+      if(rm[2] && rm[2].length !== ny) throw new Error("Zeile " + lineNo + ": Ausgabe muss " + ny + " Bit haben (ist „" + rm[2] + "“)");
+      const from = resolve(lm[1], lineNo), to = resolve(rm[1], lineNo);
+      // Wildcards expandieren
+      const wild = [];
+      for(let i = 0; i < xs.length; i++) if(xs[i] === '-') wild.push(xs.length - 1 - i);
+      const base = parseInt(xs.replace(/-/g, "0"), 2);
+      for(let k = 0; k < (1 << wild.length); k++){
+        let x = base;
+        wild.forEach((b, j) => { if((k >> j) & 1) x |= 1 << b; });
+        edges.push({from, x, to, y: rm[2] ? parseInt(rm[2], 2) : null, line: lineNo});
+      }
+      continue;
+    }
+    // Moore-Ausgabe: name : 010  oder  name / 010
+    if((m = /^(\S+)\s*[:\/]\s*([01]+)\s*$/.exec(raw))){
+      if(m[2].length !== ny) throw new Error("Zeile " + lineNo + ": Ausgabe muss " + ny + " Bit haben");
+      mooreOut.set(resolve(m[1], lineNo), parseInt(m[2], 2)); continue;
+    }
+    throw new Error("Zeile " + lineNo + ": nicht verstanden — „" + raw + "“");
+  }
+
+  const rows = [];
+  for(let a = 0; a < (1 << (nx + nz)); a++) rows.push({zn: null, y: null});
+  for(const e of edges){
+    const a = (e.x << nz) | e.from;
+    if(rows[a].zn !== null && rows[a].zn !== e.to)
+      throw new Error("Zeile " + e.line + ": Konflikt — für Zustand " + e.from.toString(2).padStart(nz,'0') + " und Eingabe " + e.x.toString(2).padStart(nx,'0') + " gibt es schon einen anderen Folgezustand (Automat wäre nichtdeterministisch)");
+    rows[a].zn = e.to;
+    const y = e.y !== null ? e.y : (mooreOut.has(e.from) ? mooreOut.get(e.from) : null);
+    if(rows[a].y !== null && y !== null && rows[a].y !== y)
+      throw new Error("Zeile " + e.line + ": Konflikt bei der Ausgabe für Zustand " + e.from.toString(2).padStart(nz,'0') + ", Eingabe " + e.x.toString(2).padStart(nx,'0'));
+    if(y !== null) rows[a].y = y;
+  }
+  // Moore-Ausgabe auch ohne Kante eintragen (für Zustände, die nur Ziel sind)
+  for(const [code, y] of mooreOut){
+    for(let x = 0; x < (1 << nx); x++){
+      const a = (x << nz) | code;
+      if(rows[a].y === null && rows[a].zn !== null) rows[a].y = y;
+    }
+  }
+  return {rows, codeToName, mooreOut, hasEdges: edges.length > 0};
+}
+
+/* ---------- 3. Klassifikation ---------- */
+/* Ergebnis: {type:'mealy'|'moore'|'medvedev'|'unknown', reason-Daten} */
+function classify(nx, nz, ny, rows){
+  const N = 1 << nz, X = 1 << nx;
+  let anyDef = false;
+  // hängt y (bei festem z) von x ab?
+  let dep = null; // {z, x1, y1, x2, y2}
+  const stateOut = new Array(N).fill(null); // gemeinsame Ausgabe je Zustand (falls Moore)
+  for(let z = 0; z < N; z++){
+    let seen = null, seenX = -1;
+    for(let x = 0; x < X; x++){
+      const r = rows[(x << nz) | z];
+      if(r.y === null) continue;
+      anyDef = true;
+      if(seen === null){ seen = r.y; seenX = x; }
+      else if(r.y !== seen && !dep) dep = {z, x1: seenX, y1: seen, x2: x, y2: r.y};
+    }
+    stateOut[z] = seen;
+  }
+  if(!anyDef) return {type: "unknown"};
+  if(dep) return {type: "mealy", dep};
+  // Moore; Medvedev, falls y == z (gleiche Breite, identische Werte)
+  let medvedev = (ny === nz);
+  if(medvedev) for(let z = 0; z < N; z++) if(stateOut[z] !== null && stateOut[z] !== z){ medvedev = false; break; }
+  return {type: medvedev ? "medvedev" : "moore", stateOut};
+}
+
+/* ---------- 4. Quine-McCluskey + Petrick (aus kv.html) ---------- */
+function qmcPrimes(minterms){
+  let cur = new Map();
+  for(const m of minterms) cur.set(m + "|0", {v: m, dc: 0});
+  const primes = [];
+  while(cur.size){
+    const arr = [...cur.values()], next = new Map(), combined = new Set();
+    for(let i = 0; i < arr.length; i++) for(let j = i + 1; j < arr.length; j++){
+      const a = arr[i], b = arr[j];
+      if(a.dc !== b.dc) continue;
+      const diff = a.v ^ b.v;
+      if(diff && (diff & (diff - 1)) === 0){
+        const v = a.v & b.v, dc = a.dc | diff;
+        next.set(v + "|" + dc, {v, dc});
+        combined.add(a); combined.add(b);
+      }
+    }
+    for(const it of arr) if(!combined.has(it)) primes.push(it);
+    cur = next;
+  }
+  return primes;
+}
+
+const impCovers = (imp, m) => (m & ~imp.dc) === imp.v;
+function popcount(x){ let c = 0; while(x){ c += x & 1; x >>= 1; } return c; }
+
+function minimize(n, ones, dcs){
+  if(!ones.length) return {terms: [], constant: 0};
+  const uniqueAll = [...new Set([...ones, ...dcs])];
+  if(uniqueAll.length === (1 << n)) return {terms: [{v: 0, dc: (1 << n) - 1}], constant: 1};
+  const primes = qmcPrimes(uniqueAll);
+  let remaining = new Set(ones);
+  const chosen = [];
+  let changed = true;
+  while(changed){
+    changed = false;
+    for(const m of [...remaining]){
+      const covering = primes.filter(p => impCovers(p, m) && !chosen.includes(p));
+      if(covering.length === 1){
+        const p = covering[0];
+        chosen.push(p); changed = true;
+        for(const r of [...remaining]) if(impCovers(p, r)) remaining.delete(r);
+      }
+    }
+  }
+  if(remaining.size){
+    const cand = primes.filter(p => [...remaining].some(m => impCovers(p, m)));
+    let prods = [new Set()];
+    let blown = false;
+    for(const m of remaining){
+      const opts = cand.filter(p => impCovers(p, m));
+      const next = [];
+      for(const pr of prods) for(const o of opts){ const s = new Set(pr); s.add(o); next.push(s); }
+      next.sort((a, b) => a.size - b.size);
+      const keep = [];
+      for(const s of next){
+        let sub = false;
+        for(const k of keep){ let all = true; for(const x of k) if(!s.has(x)){ all = false; break; } if(all){ sub = true; break; } }
+        if(!sub) keep.push(s);
+      }
+      prods = keep;
+      if(prods.length > 3000){ blown = true; break; }
+    }
+    if(!blown && prods.length){
+      const cost = s => { let lits = 0; for(const p of s) lits += n - popcount(p.dc); return [s.size, lits]; };
+      prods.sort((a, b) => { const ca = cost(a), cb = cost(b); return ca[0] - cb[0] || ca[1] - cb[1]; });
+      for(const p of prods[0]) if(!chosen.includes(p)) chosen.push(p);
+    } else {
+      while(remaining.size){
+        let bestP = null, bestC = -1;
+        for(const p of cand){
+          let c = 0; for(const m of remaining) if(impCovers(p, m)) c++;
+          if(c > bestC || (c === bestC && bestP && popcount(p.dc) > popcount(bestP.dc))){ bestC = c; bestP = p; }
+        }
+        if(!bestP) break;
+        chosen.push(bestP);
+        for(const m of [...remaining]) if(impCovers(bestP, m)) remaining.delete(m);
+      }
+    }
+  }
+  return {terms: chosen, constant: null};
+}
+
+/* Minterme/DCs einer Funktion (Bit i von zn bzw. y) aus rows */
+function fnOnes(rows, kind, bitIdx){
+  const ones = [], dcs = [];
+  rows.forEach((r, a) => {
+    const v = kind === 'z' ? r.zn : r.y;
+    if(v === null) dcs.push(a);
+    else if((v >> bitIdx) & 1) ones.push(a);
+  });
+  return {ones, dcs};
+}
+
+/* ---------- 5. Kanten für den Graphen (mit QMC-Kompaktierung der x-Labels) ---------- */
+function graphEdges(nx, nz, rows, mealy){
+  // key: from|to|y (Mealy) bzw. from|to (Moore) → Menge von x-Werten
+  const groups = new Map();
+  const N = 1 << nz, X = 1 << nx;
+  for(let z = 0; z < N; z++) for(let x = 0; x < X; x++){
+    const r = rows[(x << nz) | z];
+    if(r.zn === null) continue;
+    const key = mealy ? z + "|" + r.zn + "|" + (r.y === null ? "?" : r.y) : z + "|" + r.zn;
+    if(!groups.has(key)) groups.set(key, {from: z, to: r.zn, y: mealy ? r.y : null, xs: []});
+    groups.get(key).xs.push(x);
+  }
+  // x-Mengen mit QMC zu Implikanten ("-"-Notation) zusammenfassen
+  for(const g of groups.values()){
+    g.xImps = qmcPrimesExact(g.xs, nx);
+  }
+  return [...groups.values()];
+}
+/* exakte Überdeckung einer vollständigen Menge: qmcPrimes reicht hier,
+   da die Menge selbst abgedeckt wird; wir wählen eine irrendundante Teilmenge */
+function qmcPrimesExact(xs, nx){
+  if(xs.length === (1 << nx)) return [{v: 0, dc: (1 << nx) - 1}];
+  const primes = qmcPrimes(xs);
+  // greedy irredundant
+  const res = [], rem = new Set(xs);
+  while(rem.size){
+    let best = null, bc = -1;
+    for(const p of primes){ let c = 0; for(const m of rem) if(impCovers(p, m)) c++; if(c > bc){ bc = c; best = p; } }
+    res.push(best);
+    for(const m of [...rem]) if(impCovers(best, m)) rem.delete(m);
+  }
+  return res;
+}
+
+/* Implikant über den x-Variablen als Bitstring mit '-' */
+function xImpToBits(imp, nx){
+  let s = "";
+  for(let b = nx - 1; b >= 0; b--) s += (imp.dc >> b & 1) ? "-" : ((imp.v >> b & 1) ? "1" : "0");
+  return s;
+}
+
+/* ---------- 6. Erreichbarkeit & Simulation ---------- */
+function reachable(nx, nz, rows, startZ){
+  const seen = new Set([startZ]), queue = [startZ];
+  while(queue.length){
+    const z = queue.shift();
+    for(let x = 0; x < (1 << nx); x++){
+      const r = rows[(x << nz) | z];
+      if(r.zn !== null && !seen.has(r.zn)){ seen.add(r.zn); queue.push(r.zn); }
+    }
+  }
+  return seen;
+}
+
+function simulate(nx, nz, rows, startZ, seq){
+  const trace = [];
+  let z = startZ;
+  for(let k = 0; k < seq.length; k++){
+    const x = seq[k];
+    const r = rows[(x << nz) | z];
+    trace.push({takt: k + 1, z, x, y: r.y, zn: r.zn});
+    if(r.zn === null) return {trace, stopped: k + 1};
+    z = r.zn;
+  }
+  return {trace, stopped: null, endZ: z};
+}
+/* ════════════════ CORE-END ════════════════ */
+
+
+/* ════════════════════════════════════════════════════════════
+   UI & RENDERING
+   ════════════════════════════════════════════════════════════ */
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+const bits = (v, n) => v.toString(2).padStart(n, "0");
+const SUB = "₀₁₂₃₄₅₆₇₈₉";
+
+const state = {
+  nx: 1, nz: 2, ny: 1,
+  mode: "fn",
+  znBits: [], yBits: [],   // Editiermodell der Tabelle
+  graphInfo: null,         // codeToName etc. aus parseGraph
+};
+
+/* ---------- Formel-HTML ---------- */
+function varName(kind, i){ // kind 'x'|'z'|'y'
+  const n = kind === 'x' ? state.nx : kind === 'z' ? state.nz : state.ny;
+  return n === 1 ? kind : kind + "<sub>" + i + "</sub>";
+}
+function lit(kind, i, neg){
+  const v = varName(kind, i);
+  return neg ? '<span class="ov">' + v + '</span>' : v;
+}
+/* Implikant über den kombinierten Variablen (nx+nz), Anzeige x-Bits zuerst */
+function termHtml(term){
+  const n = state.nx + state.nz;
+  const parts = [];
+  for(let b = n - 1; b >= 0; b--){
+    if((term.dc >> b) & 1) continue;
+    const pos = (term.v >> b) & 1;
+    if(b >= state.nz) parts.push(lit('x', b - state.nz, !pos));
+    else parts.push(lit('z', b, !pos));
+  }
+  return parts.length ? parts.join(" ") : "1";
+}
+function dnfHtml(terms, constant){
+  if(constant === 0 || !terms.length) return "0";
+  if(constant === 1) return "1";
+  return terms.map(termHtml).join(" ∨ ");
+}
+function mintermHtml(a){
+  const n = state.nx + state.nz;
+  return termHtml({v: a, dc: 0});
+}
+function fnName(kind, i){
+  if(kind === 'z') return varName('z', i) + "<sup>+</sup>";
+  return varName('y', i);
+}
+
+/* ---------- LaTeX-Formeln (KaTeX mit Fallback, wie kv.html) ---------- */
+function renderMath(latexStr){
+  if(window.katex){
+    try { return katex.renderToString(latexStr, { throwOnError: false }); }
+    catch(e){ /* Fallback */ }
+  }
+  return '<span class="math-fallback">' + latexStr
+    .replace(/\\overline\{([^}]+)\}/g, '<span class="ov">$1</span>')
+    .replace(/\\wedge/g, '∧').replace(/\\vee/g, ' ∨ ')
+    .replace(/\\oplus/g, '⊕').replace(/\\Rightarrow/g, '⇒')
+    .replace(/\\in/g, '∈').replace(/\\subseteq/g, '⊆')
+    .replace(/\\{/g, '{').replace(/\\}/g, '}')
+    .replace(/\^\{([^}]+)\}/g, '<sup>$1</sup>')
+    .replace(/_\{([^}]+)\}/g, '<sub>$1</sub>')
+    .replace(/\\,/g, ' ').replace(/\\;/g, ' ').replace(/=/g, ' = ') + '</span>';
+}
+function varLx(kind, i){
+  const n = kind === 'x' ? state.nx : kind === 'z' ? state.nz : state.ny;
+  return n === 1 ? kind : kind + "_{" + i + "}";
+}
+function litLx(kind, i, neg){
+  const v = varLx(kind, i);
+  return neg ? "\\overline{" + v + "}" : v;
+}
+function fnNameLx(kind, i){
+  return kind === 'z' ? varLx('z', i) + "^{+}" : varLx('y', i);
+}
+function termLx(term){
+  const n = state.nx + state.nz;
+  const parts = [];
+  for(let b = n - 1; b >= 0; b--){
+    if((term.dc >> b) & 1) continue;
+    const pos = (term.v >> b) & 1;
+    if(b >= state.nz) parts.push(litLx('x', b - state.nz, !pos));
+    else parts.push(litLx('z', b, !pos));
+  }
+  return parts.length ? parts.join("\\,") : "1";
+}
+function dnfLx(terms, constant){
+  if(constant === 0 || !terms.length) return "0";
+  if(constant === 1) return "1";
+  return terms.map(termLx).join(" \\vee ");
+}
+
+/* AST → LaTeX — gleiches Format wie astToLatex in kv.html */
+const PREC_LX = {or: 3, xor: 4, and: 5, not: 6, var: 7, const: 7};
+function astToLx(node){
+  function side(n, c){ const h = rec(c); return (PREC_LX[c.t] <= 5 && c.t !== n.t) ? "(" + h + ")" : h; }
+  function bin(n, sym){ return side(n, n.a) + " " + sym + " " + side(n, n.b); }
+  function rec(n){
+    switch(n.t){
+      case "const": return String(n.v);
+      case "var":   return varLx(n.g, n.i);
+      case "not":   return "\\overline{" + rec(n.a) + "}";
+      /* ∧ nur zeigen, wenn es auch getippt wurde — sonst Nebeneinanderschreibung */
+      case "and":   return n.exp ? bin(n, "\\wedge") : side(n, n.a) + "\\," + side(n, n.b);
+      case "or":    return bin(n, "\\vee");
+      case "xor":   return bin(n, "\\oplus");
+    }
+    return "";
+  }
+  return rec(node);
+}
+
+/* ---------- Schritt-Bausteine ---------- */
+let stepCounter = 0;
+function step(title, body, cls){
+  stepCounter++;
+  return '<div class="step ' + (cls || "") + '"><div class="stephead"><span class="stepnum">' + stepCounter +
+         '</span><span class="steptitle">' + title + '</span></div><div class="stepbody">' + body + '</div></div>';
+}
+
+/* ---------- Tabs / Modus ---------- */
+document.querySelectorAll("#modeSeg button").forEach(b => {
+  b.onclick = () => {
+    document.querySelectorAll("#modeSeg button").forEach(x => x.classList.toggle("active", x === b));
+    state.mode = b.dataset.mode;
+    $("pgFn").classList.toggle("active", state.mode === "fn");
+    $("pgTab").classList.toggle("active", state.mode === "tab");
+    $("pgGraph").classList.toggle("active", state.mode === "graph");
+    scheduleBuild();
+  };
+});
+
+/* ---------- Dimensionen ---------- */
+function readDims(){
+  state.nx = +$("selNx").value;
+  state.nz = +$("selNz").value;
+  state.ny = +$("selNy").value;
+}
+["selNx", "selNz", "selNy"].forEach(id => $(id).onchange = () => {
+  readDims(); initEditModel(); renderFnFields(); renderEditTable();
+  $("inStart").value = "0".repeat(state.nz);
+  scheduleBuild();
+});
+
+/* ---------- Tab 1: Funktionsfelder ---------- */
+function renderFnFields(){
+  const box = $("fnFields");
+  let h = "";
+  for(let i = state.nz - 1; i >= 0; i--){
+    h += '<div class="fnrow"><span class="fnlab">' + fnName('z', i) + ' =</span><input type="text" id="fz' + i + '" spellcheck="false" autocomplete="off" placeholder="z. B. ~x z' + i + '"></div>';
+    h += '<div class="fnprev" id="pfz' + i + '"></div>';
+  }
+  for(let i = state.ny - 1; i >= 0; i--){
+    h += '<div class="fnrow"><span class="fnlab">' + fnName('y', i) + ' =</span><input type="text" id="fy' + i + '" spellcheck="false" autocomplete="off" placeholder="z. B. ~z0"></div>';
+    h += '<div class="fnprev" id="pfy' + i + '"></div>';
+  }
+  box.innerHTML = h;
+  box.querySelectorAll("input").forEach(inp => {
+    inp.oninput = () => {
+      updateFnPreview(inp.id.slice(1, 2), +inp.id.slice(2));
+      scheduleBuild();
+    };
+    inp.onfocus = () => { lastFnInput = inp; };
+  });
+}
+
+/* Operator-Toolbar (wie in robdd.html): Symbol am Cursor des zuletzt
+   fokussierten Funktionsfelds einfügen */
+let lastFnInput = null;
+{
+  const FN_OPS = [["¬", "NICHT (~)"], ["∧", "UND (&)"], ["∨", "ODER (|)"], ["⊕", "XOR (^)"], ["(", "Klammer auf"], [")", "Klammer zu"]];
+  const box = $("fnOps");
+  for(const [sym, tip] of FN_OPS){
+    const b = document.createElement("button");
+    b.type = "button"; b.textContent = sym; b.title = tip;
+    b.onmousedown = e => e.preventDefault();   // Fokus nicht aus dem Eingabefeld ziehen
+    b.onclick = () => {
+      if(!lastFnInput || !lastFnInput.isConnected) lastFnInput = $("fnFields").querySelector("input");
+      const ta = lastFnInput;
+      if(!ta) return;
+      const s0 = ta.selectionStart === null ? ta.value.length : ta.selectionStart;
+      const e0 = ta.selectionEnd === null ? s0 : ta.selectionEnd;
+      const ins = /[∧∨⊕]/.test(sym) ? " " + sym + " " : sym;
+      ta.value = ta.value.slice(0, s0) + ins + ta.value.slice(e0);
+      ta.selectionStart = ta.selectionEnd = s0 + ins.length;
+      ta.focus();
+      updateFnPreview(ta.id.slice(1, 2), +ta.id.slice(2));
+      scheduleBuild();
+    };
+    box.appendChild(b);
+  }
+}
+
+/* Live-Vorschau: eingegebene Formel als LaTeX rendern (Format wie kv.html) */
+function updateFnPreview(kind, i){
+  const inp = $("f" + kind + i), out = $("pf" + kind + i);
+  if(!inp || !out) return;
+  const v = inp.value.trim();
+  if(!v){ out.innerHTML = ""; return; }
+  try {
+    const ast = parseExpr(v, state.nx, state.nz);
+    out.innerHTML = renderMath(fnNameLx(kind, i) + " = " + astToLx(ast));
+  } catch(e){
+    out.innerHTML = '<span class="preverr">✗ ' + esc(e.message) + '</span>';
+  }
+}
+function refreshFnPreviews(){
+  for(let i = 0; i < state.nz; i++) updateFnPreview('z', i);
+  for(let i = 0; i < state.ny; i++) updateFnPreview('y', i);
+}
+
+/* ---------- Tab 2: editierbare Tabelle ---------- */
+function initEditModel(){
+  const R = 1 << (state.nx + state.nz);
+  state.znBits = []; state.yBits = [];
+  for(let a = 0; a < R; a++){
+    state.znBits.push(new Array(state.nz).fill(0));
+    state.yBits.push(new Array(state.ny).fill(0));
+  }
+}
+function renderEditTable(){
+  const wrap = $("editTableWrap");
+  const R = 1 << (state.nx + state.nz);
+  let h = '<table class="etab"><tr>';
+  for(let i = state.nx - 1; i >= 0; i--) h += "<th>" + varName('x', i) + "</th>";
+  for(let i = state.nz - 1; i >= 0; i--) h += "<th>" + varName('z', i) + "</th>";
+  for(let i = state.nz - 1; i >= 0; i--) h += "<th>" + fnName('z', i) + "</th>";
+  for(let i = state.ny - 1; i >= 0; i--) h += "<th>" + fnName('y', i) + "</th>";
+  h += "</tr>";
+  for(let a = 0; a < R; a++){
+    const x = a >> state.nz, z = a & ((1 << state.nz) - 1);
+    const sep = (z === 0 && x > 0) ? ' class="blocksep"' : "";
+    h += "<tr" + sep + ">";
+    for(let i = state.nx - 1; i >= 0; i--) h += '<td class="fix">' + ((x >> i) & 1) + "</td>";
+    for(let i = state.nz - 1; i >= 0; i--) h += '<td class="fix">' + ((z >> i) & 1) + "</td>";
+    for(let i = state.nz - 1; i >= 0; i--) h += editCell("zn", a, i);
+    for(let i = state.ny - 1; i >= 0; i--) h += editCell("y", a, i);
+    h += "</tr>";
+  }
+  h += "</table>";
+  wrap.innerHTML = h;
+  wrap.querySelectorAll("td.edit").forEach(td => {
+    td.onclick = () => {
+      const arr = td.dataset.f === "zn" ? state.znBits : state.yBits;
+      const a = +td.dataset.a, i = +td.dataset.i;
+      arr[a][i] = arr[a][i] === 0 ? 1 : arr[a][i] === 1 ? null : 0;
+      td.textContent = arr[a][i] === null ? "−" : arr[a][i];
+      td.className = "edit" + (arr[a][i] === 1 ? " v1" : arr[a][i] === null ? " vd" : "");
+      td.classList.add("edit");
+      scheduleBuild();
+    };
+  });
+}
+function editCell(f, a, i){
+  const arr = f === "zn" ? state.znBits : state.yBits;
+  const v = arr[a][i];
+  const cls = "edit" + (v === 1 ? " v1" : v === null ? " vd" : "");
+  return '<td class="' + cls + '" data-f="' + f + '" data-a="' + a + '" data-i="' + i + '">' + (v === null ? "−" : v) + "</td>";
+}
+
+/* ---------- Ordnungsindex a = (x<<nz)|z, Zeilenreihenfolge x-major ---------- */
+function orderedA(){
+  const out = [];
+  for(let x = 0; x < (1 << state.nx); x++)
+    for(let z = 0; z < (1 << state.nz); z++)
+      out.push((x << state.nz) | z);
+  return out;
+}
+
+/* ════════════════ BUILD ════════════════ */
+let buildTimer = null;
+function scheduleBuild(){ clearTimeout(buildTimer); buildTimer = setTimeout(build, 250); }
+
+function setStatus(id, kind, msg){ const el = $(id); el.className = "status " + kind; el.textContent = msg; }
+
+function build(){
+  readDims();
+  stepCounter = 0;
+  state.graphInfo = null;
+  state.fnLx = null;
+  if(state.mode === "fn") refreshFnPreviews();
+  let rows = null, srcNote = "";
+
+  try {
+    if(state.mode === "fn"){
+      const zExprs = [], yExprs = [];
+      for(let i = 0; i < state.nz; i++){
+        const v = ($("fz" + i) || {}).value || "";
+        if(!v.trim()){ setStatus("stFn", "muted", "Formeln eingeben (alle Felder)."); return renderPlaceholder(); }
+        zExprs.push(v);
+      }
+      for(let i = 0; i < state.ny; i++){
+        const v = ($("fy" + i) || {}).value || "";
+        if(!v.trim()){ setStatus("stFn", "muted", "Formeln eingeben (alle Felder)."); return renderPlaceholder(); }
+        yExprs.push(v);
+      }
+      rows = buildRowsFromFns(state.nx, state.nz, state.ny, zExprs, yExprs);
+      state.fnLx = [];
+      for(let i = state.nz - 1; i >= 0; i--) state.fnLx.push(fnNameLx('z', i) + " = " + astToLx(parseExpr(zExprs[i], state.nx, state.nz)));
+      for(let i = state.ny - 1; i >= 0; i--) state.fnLx.push(fnNameLx('y', i) + " = " + astToLx(parseExpr(yExprs[i], state.nx, state.nz)));
+      setStatus("stFn", "ok", "✓ Formeln geparst");
+      srcNote = "aus den eingegebenen Schaltfunktionen";
+    } else if(state.mode === "tab"){
+      rows = buildRowsFromEdit(state.nx, state.nz, state.ny, state.znBits, state.yBits);
+      setStatus("stTab", "ok", "✓ Tabelle übernommen");
+      srcNote = "aus der eingegebenen Automatentabelle";
+    } else {
+      const g = parseGraph($("inGraph").value, state.nx, state.nz, state.ny);
+      if(!g.hasEdges){ setStatus("stGraph", "muted", "Kanten eingeben."); return renderPlaceholder(); }
+      rows = g.rows;
+      state.graphInfo = g;
+      setStatus("stGraph", "ok", "✓ Graph geparst");
+      srcNote = "aus der eingegebenen Kantenliste";
+    }
+  } catch(e){
+    setStatus(state.mode === "fn" ? "stFn" : state.mode === "tab" ? "stTab" : "stGraph", "bad", "✗ " + e.message);
+    return;
+  }
+
+  /* Startzustand */
+  let startZ = 0;
+  const stTxt = $("inStart").value.trim();
+  if(stTxt){
+    if(!new RegExp("^[01]{" + state.nz + "}$").test(stTxt)){
+      setStatus("stSim", "bad", "✗ Startzustand muss " + state.nz + " Bit haben (z. B. " + "0".repeat(state.nz) + ")");
+      return;
+    }
+    startZ = parseInt(stTxt, 2);
+  }
+
+  /* Sequenz */
+  let seq = null;
+  const seqTxt = $("inSeq").value.trim();
+  if(seqTxt){
+    const toks = seqTxt.split(/[\s,;]+/).filter(Boolean);
+    const bad = toks.find(t => !new RegExp("^[01]{" + state.nx + "}$").test(t));
+    if(bad){
+      setStatus("stSim", "bad", "✗ „" + bad + "“ ist keine gültige Eingabe (" + state.nx + " Bit pro Takt)");
+      seq = null;
+    } else {
+      seq = toks.map(t => parseInt(t, 2));
+      setStatus("stSim", "ok", "✓ " + seq.length + " Takte");
+    }
+  } else {
+    setStatus("stSim", "muted", "");
+  }
+
+  const cls = classify(state.nx, state.nz, state.ny, rows);
+  const defined = rows.filter(r => r.zn !== null).length;
+
+  $("capTitle").textContent = "Schaltwerk-Analyse";
+  $("capDesc").textContent = srcNote + " — " + state.nz + " Flipflop" + (state.nz > 1 ? "s" : "") + ", " +
+    (1 << state.nz) + " Zustände, Eingabe " + state.nx + " Bit, Ausgabe " + state.ny + " Bit" +
+    (defined < rows.length ? " (" + (rows.length - defined) + " von " + rows.length + " Übergängen undefiniert)" : "");
+
+  let html = "";
+  html += stepKenngroessen(rows, cls);
+  html += stepTabelle(rows, cls);
+  html += stepGraph(rows, cls, startZ);
+  if($("chkKV").checked) html += stepFunktionen(rows);
+  if($("chkPLA").checked) html += stepSchaltwerk(rows);
+  if(seq && seq.length) html += stepSimulation(rows, cls, startZ, seq);
+  $("steps").innerHTML = html;
+}
+
+function renderPlaceholder(){
+  $("capTitle").textContent = "—";
+  $("capDesc").textContent = "";
+  $("steps").innerHTML = '<div class="placeholder"><div class="big">⚙️</div>Eingabe links vervollständigen — die Lösung erscheint hier Schritt für Schritt.</div>';
+}
+
+/* ════════ Schritt 1: Kenngrößen & Klassifikation ════════ */
+function stepKenngroessen(rows, cls){
+  const N = 1 << state.nz, X = 1 << state.nx;
+  const setLine = (lx, expl) => '<div class="setline">' + renderMath(lx) + '<span class="expl">' + expl + "</span></div>";
+
+  let b = "<p>" + state.nz + " Flipflop" + (state.nz > 1 ? "s" : "") + " speichern den Zustand ⇒ " +
+    renderMath("2^{" + state.nz + "} = " + N) + " Zustände.</p>";
+
+  b += setLine("X = \\{" + Array.from({length: X}, (_, x) => bits(x, state.nx)).join(",\\, ") + "\\}", "Eingabealphabet");
+  const yVals = [...new Set(rows.filter(r => r.y !== null).map(r => r.y))].sort((a, b2) => a - b2);
+  b += setLine("Y = \\{" + (yVals.length ? yVals.map(y => bits(y, state.ny)).join(",\\, ") : "\\,") + "\\} \\subseteq \\{0,1\\}^{" + state.ny + "}", "vorkommende Ausgaben");
+  b += setLine("S = \\{" + Array.from({length: N}, (_, z) => bits(z, state.nz)).join(",\\, ") + "\\}", "Zustände = Bitmuster der Flipflops");
+  if(state.graphInfo && state.graphInfo.codeToName.size){
+    const named = [];
+    for(const [code, name] of state.graphInfo.codeToName) if(name !== bits(code, state.nz)) named.push(esc(name) + " ≙ " + bits(code, state.nz));
+    if(named.length) b += '<div class="setline"><span class="expl">Kodierung: ' + named.join(", &nbsp;") + "</span></div>";
+  }
+
+  if(cls.type === "mealy"){
+    const d = cls.dep;
+    b += '<p style="margin-bottom:4px"><span class="badge">Mealy-Automat</span> &nbsp;' + renderMath("y = f(x, z)") + " — die Ausgabe hängt auch von der Eingabe ab: " +
+      "im Zustand " + bits(d.z, state.nz) + " gibt x=" + bits(d.x1, state.nx) + " → y=<b>" + bits(d.y1, state.ny) +
+      "</b>, aber x=" + bits(d.x2, state.nx) + " → y=<b>" + bits(d.y2, state.ny) + "</b>.</p>";
+  } else if(cls.type === "moore" || cls.type === "medvedev"){
+    b += '<p style="margin-bottom:4px"><span class="badge">' + (cls.type === "medvedev" ? "Medvedev-Automat" : "Moore-Automat") + '</span> &nbsp;' +
+      renderMath(cls.type === "medvedev" ? "y = z" : "y = f(z)") +
+      " — die Ausgabe ist in jedem Zustand über alle Eingaben konstant" +
+      (cls.type === "medvedev" ? " und sogar identisch mit dem Zustand (Spezialfall der Moore-Automaten)." : ".") + "</p>";
+  }
+  return step("Kenngrößen, Mengen X / Y / S &amp; Automatentyp", b);
+}
+
+/* ════════ Schritt 2: Automatentabelle ════════ */
+function stepTabelle(rows, cls){
+  let b = "";
+  if(state.mode === "fn" && state.fnLx){
+    b += "<p style='margin-bottom:4px'>Gegebene Funktionen:</p>";
+    for(const lx of state.fnLx) b += '<div class="formula">' + renderMath(lx) + "</div>";
+  }
+  b += "<p>Alle " + rows.length + " Kombinationen aus Eingabe und Zustand (2<sup>" + state.nx + "</sup>·2<sup>" + state.nz + "</sup>)" +
+    (state.mode === "fn" ? " — Werte in die Formeln eingesetzt:" : ":") + "</p>";
+
+  b += '<table class="wtab"><tr>';
+  for(let i = state.nx - 1; i >= 0; i--) b += "<th>" + varName('x', i) + "</th>";
+  for(let i = state.nz - 1; i >= 0; i--) b += "<th>" + varName('z', i) + "</th>";
+  for(let i = state.nz - 1; i >= 0; i--) b += "<th" + (i === state.nz - 1 ? ' style="border-left:2.5px double #94a3b8"' : "") + ">" + fnName('z', i) + "</th>";
+  for(let i = state.ny - 1; i >= 0; i--) b += "<th" + (i === state.ny - 1 ? ' style="border-left:2.5px double #94a3b8"' : "") + ">" + fnName('y', i) + "</th>";
+  b += "</tr>";
+  for(const a of orderedA()){
+    const x = a >> state.nz, z = a & ((1 << state.nz) - 1);
+    const r = rows[a];
+    b += "<tr" + ((z === 0 && x > 0) ? ' class="blocksep"' : "") + ">";
+    for(let i = state.nx - 1; i >= 0; i--) b += "<td>" + ((x >> i) & 1) + "</td>";
+    for(let i = state.nz - 1; i >= 0; i--) b += "<td>" + ((z >> i) & 1) + "</td>";
+    for(let i = state.nz - 1; i >= 0; i--)
+      b += "<td" + (i === state.nz - 1 ? ' class="dsep' : ' class="') + (r.zn === null ? ' undef">−' : '">' + ((r.zn >> i) & 1)) + "</td>";
+    for(let i = state.ny - 1; i >= 0; i--)
+      b += "<td" + (i === state.ny - 1 ? ' class="dsep' : ' class="') + (r.y === null ? ' undef">−' : '">' + ((r.y >> i) & 1)) + "</td>";
+    b += "</tr>";
+  }
+  b += "</table>";
+
+  if(state.mode === "fn"){
+    const a0 = orderedA()[0], r0 = rows[a0];
+    b += '<div class="note">Zeile 1: ' +
+      Array.from({length: state.nx}, (_, i) => varName('x', state.nx-1-i) + "=" + ((a0 >> (state.nz + state.nx-1-i)) & 1)).join(", ") + ", " +
+      Array.from({length: state.nz}, (_, i) => varName('z', state.nz-1-i) + "=" + ((a0 >> (state.nz-1-i)) & 1)).join(", ") +
+      " einsetzen ⇒ " + Array.from({length: state.nz}, (_, j) => { const i = state.nz-1-j; return fnName('z', i) + "=" + ((r0.zn >> i) & 1); }).join(", ") +
+      ", " + Array.from({length: state.ny}, (_, j) => { const i = state.ny-1-j; return fnName('y', i) + "=" + ((r0.y >> i) & 1); }).join(", ") +
+      " — übrige Zeilen analog.</div>";
+  }
+  return step("Automatentabelle (Ablauftabelle)", b);
+}
+
+/* ════════ Schritt 3: Automatengraph (SVG) ════════ */
+function stepGraph(rows, cls, startZ){
+  const N = 1 << state.nz;
+  const mealy = cls.type === "mealy" || cls.type === "unknown";
+  const edges = graphEdges(state.nx, state.nz, rows, mealy);
+  const reach = reachable(state.nx, state.nz, rows, startZ);
+
+  let b = "<p>" + (mealy
+    ? "Kanten: <b>Eingabe / Ausgabe</b> (x/y), da Mealy."
+    : "Ausgabe steht <b>im Zustand</b> (Code / Ausgabe), Kanten tragen nur die Eingabe (" + (cls.type === "medvedev" ? "Medvedev" : "Moore") + ").") +
+    " „−“ = Bit beliebig.</p>";
+
+  b += '<div class="svgbox">' + svgGraph(rows, cls, edges, startZ, reach) + "</div>";
+
+  if(reach.size < N){
+    const un = [];
+    for(let z = 0; z < N; z++) if(!reach.has(z)) un.push(bits(z, state.nz));
+    b += '<div class="note warn">Vom Startzustand ' + bits(startZ, state.nz) + " aus sind nur <b>" + reach.size + " von " + N +
+      "</b> Zuständen erreichbar. Nicht erreichbar (grau): " + un.join(", ") + ".</div>";
+  }
+  return step("Automatengraph", b);
+}
+
+function svgGraph(rows, cls, edges, startZ, reach){
+  const N = 1 << state.nz;
+  const moore = cls.type === "moore" || cls.type === "medvedev";
+  const R = N <= 2 ? 110 : N <= 4 ? 150 : 200;          // Layout-Radius
+  const r = moore ? 34 : 27;                              // Knotenradius
+  const W = 2 * R + 2 * r + 190, H = 2 * R + 2 * r + 150;
+  const cx = W / 2, cy = H / 2;
+  const pos = [];
+  for(let z = 0; z < N; z++){
+    const ang = -Math.PI / 2 + (2 * Math.PI * z) / N;
+    pos.push({x: cx + (N === 1 ? 0 : R * Math.cos(ang)), y: cy + (N === 1 ? 0 : R * Math.sin(ang))});
+  }
+  let s = '<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + " " + H + '" font-family="Consolas, monospace">';
+  s += '<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse">' +
+       '<path d="M0,0 L10,5 L0,10 z" fill="#1e293b"/></marker></defs>';
+
+  const pairSet = new Set(edges.map(e => e.from + ">" + e.to));
+  const labelOf = e => e.xImps.map(imp => {
+    const xs = xImpToBits(imp, state.nx);
+    return moore ? xs : xs + "/" + (e.y === null ? "−" : bits(e.y, state.ny));
+  }).join("; ");
+
+  for(const e of edges){
+    const lbl = labelOf(e);
+    if(e.from === e.to){
+      // Selbstschleife: außen am Knoten
+      const p = pos[e.from];
+      const dir = Math.atan2(p.y - cy, p.x - cx);
+      const a1 = dir - 0.62, a2 = dir + 0.62;
+      const x1 = p.x + r * Math.cos(a1), y1 = p.y + r * Math.sin(a1);
+      const x2 = p.x + r * Math.cos(a2), y2 = p.y + r * Math.sin(a2);
+      const ext = r + 46;
+      const c1x = p.x + ext * Math.cos(a1 - 0.25), c1y = p.y + ext * Math.sin(a1 - 0.25);
+      const c2x = p.x + ext * Math.cos(a2 + 0.25), c2y = p.y + ext * Math.sin(a2 + 0.25);
+      s += '<path d="M' + x1 + "," + y1 + " C" + c1x + "," + c1y + " " + c2x + "," + c2y + " " + x2 + "," + y2 + '" fill="none" stroke="#1e293b" stroke-width="1.4" marker-end="url(#arr)"/>';
+      const lx = p.x + (r + 54) * Math.cos(dir), ly = p.y + (r + 54) * Math.sin(dir);
+      s += svgLabel(lx, ly, lbl);
+    } else {
+      const p1 = pos[e.from], p2 = pos[e.to];
+      const dx = p2.x - p1.x, dy = p2.y - p1.y, len = Math.hypot(dx, dy);
+      const nxv = -dy / len, nyv = dx / len;   // Normale
+      const off = pairSet.has(e.to + ">" + e.from) ? 26 : (N > 2 ? 10 : 0);
+      const mx = (p1.x + p2.x) / 2 + nxv * off, my = (p1.y + p2.y) / 2 + nyv * off;
+      // Start-/Endpunkte auf den Kreisrändern (Richtung zum Kontrollpunkt)
+      const d1 = Math.atan2(my - p1.y, mx - p1.x);
+      const d2 = Math.atan2(my - p2.y, mx - p2.x);
+      const x1 = p1.x + r * Math.cos(d1), y1 = p1.y + r * Math.sin(d1);
+      const x2 = p2.x + (r + 3) * Math.cos(d2), y2 = p2.y + (r + 3) * Math.sin(d2);
+      s += '<path d="M' + x1 + "," + y1 + " Q" + mx + "," + my + " " + x2 + "," + y2 + '" fill="none" stroke="#1e293b" stroke-width="1.4" marker-end="url(#arr)"/>';
+      // Label am Kurvenpunkt t=0.5, leicht zur Außenseite versetzt
+      const qx = 0.25 * x1 + 0.5 * mx + 0.25 * x2, qy = 0.25 * y1 + 0.5 * my + 0.25 * y2;
+      s += svgLabel(qx + nxv * 13, qy + nyv * 13, lbl);
+    }
+  }
+
+  // Startpfeil
+  const sp = pos[startZ];
+  const sd = N === 1 ? Math.PI : Math.atan2(sp.y - cy, sp.x - cx);
+  const sx1 = sp.x + (r + 52) * Math.cos(sd + 0.5), sy1 = sp.y + (r + 52) * Math.sin(sd + 0.5);
+  const sx2 = sp.x + (r + 4) * Math.cos(sd + 0.5), sy2 = sp.y + (r + 4) * Math.sin(sd + 0.5);
+  s += '<line x1="' + sx1 + '" y1="' + sy1 + '" x2="' + sx2 + '" y2="' + sy2 + '" stroke="#2563eb" stroke-width="1.6" marker-end="url(#arr)"/>';
+  s += '<text x="' + sx1 + '" y="' + (sy1 - 7) + '" text-anchor="middle" font-size="12" fill="#2563eb" font-weight="bold" font-family="Segoe UI, sans-serif">Start</text>';
+
+  // Knoten
+  for(let z = 0; z < N; z++){
+    const p = pos[z];
+    const un = !reach.has(z);
+    const hasAny = rows.some((r2, a) => (a & ((1 << state.nz) - 1)) === z && r2.zn !== null) || rows.some(r2 => r2.zn === z);
+    const fill = un ? "#f1f5f9" : "#dbeafe";
+    const strokeC = un ? "#94a3b8" : "#2563eb";
+    const txtC = un ? "#94a3b8" : "#0f172a";
+    s += '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + r + '" fill="' + fill + '" stroke="' + strokeC + '" stroke-width="1.8"/>';
+    if(moore){
+      const y = cls.stateOut[z];
+      s += '<line x1="' + (p.x - r * 0.72) + '" y1="' + p.y + '" x2="' + (p.x + r * 0.72) + '" y2="' + p.y + '" stroke="' + strokeC + '" stroke-width="1"/>';
+      s += '<text x="' + p.x + '" y="' + (p.y - 7) + '" text-anchor="middle" font-size="14.5" font-weight="bold" fill="' + txtC + '">' + bits(z, state.nz) + "</text>";
+      s += '<text x="' + p.x + '" y="' + (p.y + 16) + '" text-anchor="middle" font-size="13" fill="' + txtC + '">' + (y === null ? (hasAny ? "−" : "") : bits(y, state.ny)) + "</text>";
+    } else {
+      s += '<text x="' + p.x + '" y="' + (p.y + 5) + '" text-anchor="middle" font-size="15" font-weight="bold" fill="' + txtC + '">' + bits(z, state.nz) + "</text>";
+    }
+    if(state.graphInfo && state.graphInfo.codeToName.has(z) && state.graphInfo.codeToName.get(z) !== bits(z, state.nz)){
+      s += '<text x="' + p.x + '" y="' + (p.y + r + 15) + '" text-anchor="middle" font-size="11" fill="#64748b" font-family="Segoe UI, sans-serif">' + esc(state.graphInfo.codeToName.get(z)) + "</text>";
+    }
+  }
+  if(moore){
+    s += '<text x="' + (W - 10) + '" y="18" text-anchor="end" font-size="11.5" fill="#64748b" font-family="Segoe UI, sans-serif">Knoten: Zustand / Ausgabe — Kante: Eingabe</text>';
+  } else {
+    s += '<text x="' + (W - 10) + '" y="18" text-anchor="end" font-size="11.5" fill="#64748b" font-family="Segoe UI, sans-serif">Kante: Eingabe / Ausgabe</text>';
+  }
+  return s + "</svg>";
+}
+function svgLabel(x, y, txt){
+  return '<text x="' + x + '" y="' + (y + 4) + '" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#0f172a" stroke="#ffffff" stroke-width="4" paint-order="stroke">' + esc(txt) + "</text>";
+}
+
+/* ════════ Schritt 4: Funktionen + KV-Minimierung ════════ */
+const KV_COLORS = ["#2563eb", "#dc2626", "#16a34a", "#d97706", "#7048e8", "#0e7490", "#be185d", "#4d7c0f"];
+
+function stepFunktionen(rows){
+  const n = state.nx + state.nz;
+  let b = "<p>Je Tabellenspalte: Minterme ins KV-Diagramm, möglichst große Gruppen bilden, DMF ablesen („−“ = don't care).</p>";
+  const fns = [];
+  for(let i = state.nz - 1; i >= 0; i--) fns.push({kind: 'z', idx: i});
+  for(let i = state.ny - 1; i >= 0; i--) fns.push({kind: 'y', idx: i});
+  fns.forEach((f, fi) => {
+    const {ones, dcs} = fnOnes(rows, f.kind, f.idx);
+    const sol = minimize(n, ones, dcs);
+    b += '<div style="' + (fi ? "margin-top:14px;border-top:1px dashed var(--line);padding-top:12px" : "margin-top:8px") + '">';
+    b += kvHtml(n, ones, dcs, sol);
+    b += '<div class="formula">' + renderMath(fnNameLx(f.kind, f.idx) + " \\;=\\; " + dnfLx(sol.terms, sol.constant)) + "</div>";
+    b += "</div>";
+  });
+  return step("Übergangs- und Ausgabefunktionen — KV-Diagramm → DMF", b);
+}
+
+/* KV-Diagramm als Tabelle mit Gray-Code-Achsen; Gruppen als farbige Ringe */
+const GRAYS = {1: [0, 1], 2: [0, 1, 3, 2], 3: [0, 1, 3, 2, 6, 7, 5, 4]};
+function kvHtml(n, ones, dcs, sol){
+  const rowBits = Math.floor(n / 2), colBits = n - rowBits;
+  const gr = GRAYS[rowBits] || [0], gc = GRAYS[colBits];
+  const oneSet = new Set(ones), dcSet = new Set(dcs);
+  const terms = sol.constant === null ? (sol.terms || []) : [];
+
+  const bitName = b => b >= state.nz ? varName('x', b - state.nz) : varName('z', b);
+  const colVars = Array.from({length: colBits}, (_, i) => bitName(colBits - 1 - i)).join(" ");
+  const rowVars = rowBits ? Array.from({length: rowBits}, (_, i) => bitName(colBits + rowBits - 1 - i)).join(" ") : "";
+
+  let h = '<div style="overflow-x:auto"><table class="kvt"><tr><th style="text-align:right">' + (rowBits ? rowVars + " \\ " : "") + colVars + "</th>";
+  for(const c of gc) h += "<th>" + bits(c, colBits) + "</th>";
+  h += "</tr>";
+  for(const rv of gr){
+    h += "<tr>" + (rowBits ? "<th>" + bits(rv, rowBits) + "</th>" : "<th></th>");
+    for(const cv of gc){
+      const a = (rv << colBits) | cv;
+      const isOne = oneSet.has(a), isDc = dcSet.has(a);
+      let shadows = [];
+      terms.forEach((t2, ti) => {
+        if(impCovers(t2, a)) shadows.push("inset 0 0 0 " + (2.5 + shadows.length * 3) + "px " + KV_COLORS[ti % KV_COLORS.length] + "55");
+      });
+      h += '<td' + (isDc ? ' class="dcc"' : "") + (shadows.length ? ' style="box-shadow:' + shadows.join(",") + '"' : "") + ">" +
+           '<span class="kvv">' + (isOne ? "1" : isDc ? "−" : "0") + '</span><span class="kvi">' + a + "</span></td>";
+    }
+    h += "</tr>";
+  }
+  h += "</table>";
+  if(terms.length){
+    h += '<div class="kvlegend" style="display:inline-flex;vertical-align:top;margin-left:10px;margin-top:24px">';
+    terms.forEach((t2, ti) => {
+      const col = KV_COLORS[ti % KV_COLORS.length];
+      h += '<div class="li"><span class="sw" style="border-color:' + col + ";background:" + col + '22"></span>' + renderMath(termLx(t2)) + "</div>";
+    });
+    h += "</div>";
+  }
+  return h + "</div>";
+}
+
+/* ════════ Schritt 5: Schaltwerk (PLA-Stil) ════════ */
+/* fnName() liefert HTML (<sub>/<sup>) — solche Tags brechen im Inline-SVG den
+   HTML-Parser (foreign-content breakout) und zerstören das ganze Diagramm.
+   Für SVG-Text daher tspan-basierte Labels wie bei den Rail-Beschriftungen. */
+function fnSvgLabel(kind, i){
+  const n = kind === 'z' ? state.nz : state.ny;
+  let s = kind;
+  if(n > 1) s += '<tspan dy="3" font-size="10">' + i + '</tspan><tspan dy="-3"> </tspan>';
+  if(kind === 'z') s += '<tspan dy="-5" font-size="10">+</tspan>';
+  return s;
+}
+
+function stepSchaltwerk(rows){
+  const n = state.nx + state.nz;
+  const fns = [];
+  for(let i = state.nz - 1; i >= 0; i--){
+    const {ones, dcs} = fnOnes(rows, 'z', i);
+    fns.push({label: fnName('z', i), svgLabel: fnSvgLabel('z', i), sol: minimize(n, ones, dcs), isFF: true, ffIdx: i});
+  }
+  for(let i = state.ny - 1; i >= 0; i--){
+    const {ones, dcs} = fnOnes(rows, 'y', i);
+    fns.push({label: fnName('y', i), svgLabel: fnSvgLabel('y', i), sol: minimize(n, ones, dcs), isFF: false, ffIdx: -1});
+  }
+
+  let b = "<p>Realisierung der DMFs als <b>UND/ODER-Matrix</b> (Skript S. 143): Punkte = Anschlüsse an die direkten/negierten Leitungen, " +
+    "ein &amp;-Gatter je Produktterm, ein ≥1-Gatter je Funktion. Die z<sup>+</sup>-Ausgänge führen auf die <b>1D-Eingänge der D-Flipflops</b>, " +
+    "deren Ausgänge laufen als z-Leitungen zurück. C = Takt.</p>";
+
+  b += '<div class="svgbox">' + svgPLA(fns) + "</div>";
+
+  const consts = fns.filter(f => f.sol.constant !== null);
+  if(consts.length){
+    b += '<div class="note warn">Konstante Funktionen werden nicht als Gatter gezeichnet: ' +
+      consts.map(f => f.label + " = " + f.sol.constant).join(", ") + ".</div>";
+  }
+  return step("Schaltwerk — UND/ODER-Matrix mit D-Flipflops", b);
+}
+
+function svgPLA(fns){
+  const railKeys = [];      // Reihenfolge: x̄_{nx-1}, x_{nx-1}, …, z̄_{nz-1}, z_{nz-1}, …, z̄0, z0
+  for(let i = state.nx - 1; i >= 0; i--){ railKeys.push({g:'x', i, neg:true}); railKeys.push({g:'x', i, neg:false}); }
+  for(let i = state.nz - 1; i >= 0; i--){ railKeys.push({g:'z', i, neg:true}); railKeys.push({g:'z', i, neg:false}); }
+  const railIdx = k => railKeys.findIndex(r => r.g === k.g && r.i === k.i && r.neg === k.neg);
+  const bitToRail = (b, neg) => b >= state.nz ? {g:'x', i: b - state.nz, neg} : {g:'z', i: b, neg};
+
+  const drawFns = fns.filter(f => f.sol.constant === null && f.sol.terms.length);
+  const colGroups = drawFns.map(f => f.sol.terms);
+  const nCols = colGroups.reduce((s, g) => s + g.length, 0);
+
+  // Geometrie
+  const ffW = 58, ffH = 46;
+  const ffCount = drawFns.filter(f => f.isFF).length;
+  // Die Flipflops samt Q/¬Q-Rückführungen müssen komplett links neben der
+  // UND/ODER-Matrix liegen, sonst laufen ihre Leitungen durch die Gatter.
+  const leftPad = Math.max(96, 20 + ffCount * (ffW + 56) + 96);
+  const FF_COLORS = ["#2563eb", "#16a34a", "#7048e8"];   // je Flipflop eine Farbe
+  const ffColor = i => FF_COLORS[i % FF_COLORS.length];
+  const colW = 44, groupGap = 30;
+  const railTop = 46, railGap = 17, railGroupGap = 9;
+  const railY = [];
+  { let y = railTop;
+    railKeys.forEach((k, i) => {
+      if(i > 0 && !(i % 2)) y += railGroupGap;
+      railY.push(y); y += railGap;
+    });
+  }
+  const railsBottom = railY[railY.length - 1];
+  const andY = railsBottom + 34;            // Oberkante &-Gatter
+  const andH = 30, andW = 30;
+  const orY = andY + andH + 44;
+  const orH = 32;
+  const ffY = orY + orH + 58;
+  const clockY = ffY + ffH + 34;
+  const width = leftPad + nCols * colW + (drawFns.length - 1) * groupGap + 120;
+  const height = clockY + 40;
+
+  let s = '<svg xmlns="http://www.w3.org/2000/svg" width="' + Math.max(width, 560) + '" height="' + height + '" viewBox="0 0 ' + Math.max(width, 560) + " " + height + '" font-family="Consolas, monospace" font-size="12.5">';
+  const line = (x1, y1, x2, y2, c, w2) => '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" stroke="' + (c || "#1e293b") + '" stroke-width="' + (w2 || 1.3) + '"/>';
+  const dot = (x, y) => '<circle cx="' + x + '" cy="' + y + '" r="3" fill="#1e293b"/>';
+  const txt = (x, y, t2, anchor, col, fs) => '<text x="' + x + '" y="' + y + '" text-anchor="' + (anchor || "start") + '" fill="' + (col || "#0f172a") + '"' + (fs ? ' font-size="' + fs + '"' : "") + ">" + t2 + "</text>";
+
+  // Spaltenpositionen
+  const colX = []; let fx = leftPad + 24;
+  colGroups.forEach(g => { g.forEach(() => { colX.push(fx); fx += colW; }); fx += groupGap; });
+  const railRight = fx - groupGap + 26;
+
+  // Leitungen (Rails) + Beschriftung rechts
+  railKeys.forEach((k, i) => {
+    s += line(leftPad - (k.g === 'x' ? 60 : 12), railY[i], railRight, railY[i], k.g === 'z' ? ffColor(k.i) : "#1e293b");
+    const nm = (k.g === 'x' ? (state.nx === 1 ? "x" : "x") : (state.nz === 1 ? "z" : "z"));
+    const idxTx = ((k.g === 'x' && state.nx > 1) || (k.g === 'z' && state.nz > 1)) ? '<tspan dy="3" font-size="10">' + k.i + '</tspan><tspan dy="-3"> </tspan>' : " ";
+    s += txt(railRight + 6, railY[i] + 4, (k.neg ? "¬" : "") + nm + idxTx, "start", k.g === 'x' ? "#7c2d12" : ffColor(k.i));
+  });
+  // x-Inverter (Gatter „1“ mit Kreis) links: von x-Rail zur x̄-Rail
+  for(let i = state.nx - 1; i >= 0; i--){
+    const yN = railY[railIdx({g:'x', i, neg:true})], yP = railY[railIdx({g:'x', i, neg:false})];
+    const bx = leftPad - 56;
+    s += line(leftPad - 76, yP, bx - 2, yP);                    // x kommt von links
+    s += txt(leftPad - 92, yP + 4, (state.nx === 1 ? "x" : "x<tspan dy=\"3\" font-size=\"10\">" + i + "</tspan>"), "start");
+    s += line(bx - 2, yP, bx - 2, yN - 0);                      // hoch zum Inverter
+    s += '<rect x="' + bx + '" y="' + (yN - 9) + '" width="24" height="18" fill="#fff" stroke="#1e293b" stroke-width="1.3"/>';
+    s += txt(bx + 12, yN + 4, "1", "middle");
+    s += '<circle cx="' + (bx + 28) + '" cy="' + yN + '" r="3.5" fill="#fff" stroke="#1e293b" stroke-width="1.2"/>';
+    s += line(bx + 31.5, yN, leftPad - 12, yN);
+  }
+
+  // UND-Spalten
+  let ci = 0;
+  const orOut = [];   // {f, x} Ausgabe-x je Funktion
+  colGroups.forEach((terms, fi) => {
+    const first = ci;
+    terms.forEach(t => {
+      const x = colX[ci];
+      // vertikale Leitung durch die Rails
+      let topMost = Infinity;
+      for(let b2 = 0; b2 < state.nx + state.nz; b2++){
+        if((t.dc >> b2) & 1) continue;
+        const pos = (t.v >> b2) & 1;
+        const ri = railIdx(bitToRail(b2, !pos));
+        topMost = Math.min(topMost, railY[ri]);
+        s += dot(x, railY[ri]);
+      }
+      if(topMost === Infinity) topMost = railTop; // Term "1"
+      s += line(x, topMost, x, andY);
+      // &-Gatter
+      s += '<rect x="' + (x - andW / 2) + '" y="' + andY + '" width="' + andW + '" height="' + andH + '" fill="#fff" stroke="#1e293b" stroke-width="1.4"/>';
+      s += txt(x, andY + 20, "&amp;", "middle");
+      ci++;
+    });
+    // ODER-Gatter unter der Gruppe
+    const gx1 = colX[first], gx2 = colX[ci - 1];
+    const ox = (gx1 + gx2) / 2;
+    const ow = Math.max(44, gx2 - gx1 + 26);
+    for(let k = first; k < ci; k++) s += line(colX[k], andY + andH, colX[k], orY);
+    s += '<rect x="' + (ox - ow / 2) + '" y="' + orY + '" width="' + ow + '" height="' + orH + '" fill="#fff" stroke="#1e293b" stroke-width="1.4"/>';
+    s += txt(ox, orY + 21, "≥1", "middle");
+    const fcol = drawFns[fi].isFF ? ffColor(drawFns[fi].ffIdx) : "#166534";
+    s += line(ox, orY + orH, ox, orY + orH + 18, drawFns[fi].isFF ? fcol : "#1e293b", 1.4);
+    s += txt(ox + 8, orY + orH + 16, drawFns[fi].svgLabel, "start", fcol);
+    orOut.push({f: drawFns[fi], x: ox});
+  });
+
+  // D-Flipflops (für z⁺-Funktionen) + Rückführung
+  const ffFns = orOut.filter(o => o.f.isFF);
+  let ffx = 20;
+  ffFns.forEach((o, k) => {
+    const col = ffColor(o.f.ffIdx);
+    const fy = ffY;
+    const busY = orY + orH + 26 + k * 9;   // gestaffelt, damit sich die Busse nicht überlagern
+    // Verbindung OR-Ausgang → FF-Eingang (über waagerechten Bus)
+    s += line(o.x, orY + orH + 18, o.x, busY, col, 1.4);
+    s += line(o.x, busY, ffx + ffW + 14, busY, col, 1.4);
+    s += line(ffx + ffW + 14, busY, ffx + ffW + 14, fy + 14, col, 1.4);
+    s += line(ffx + ffW + 14, fy + 14, ffx + ffW, fy + 14, col, 1.4);
+    // FF-Box
+    s += '<rect x="' + ffx + '" y="' + fy + '" width="' + ffW + '" height="' + ffH + '" fill="#fff" stroke="#1e293b" stroke-width="1.5"/>';
+    s += txt(ffx + ffW - 6, fy + 18, "1D", "end", "#0f172a", 11.5);
+    s += txt(ffx + ffW - 6, fy + 38, "C1", "end", "#0f172a", 11.5);
+    // Takt
+    s += line(ffx + ffW, fy + 34, ffx + ffW + 26, fy + 34);
+    s += line(ffx + ffW + 26, fy + 34, ffx + ffW + 26, clockY);
+    // Ausgänge Q, Q̄ links → hoch zu den z-Rails
+    const yQ = railY[railIdx({g:'z', i: o.f.ffIdx, neg:false})];
+    const yQn = railY[railIdx({g:'z', i: o.f.ffIdx, neg:true})];
+    const laneQ = ffx + 14, laneQn = ffx + 34;
+    s += line(laneQ, fy, laneQ, yQ, col, 1.4);  s += line(laneQ, yQ, leftPad - 12, yQ, col, 1.4);
+    s += line(laneQn, fy, laneQn, yQn, col, 1.4); s += line(laneQn, yQn, leftPad - 12, yQn, col, 1.4);
+    s += txt(laneQ - 4, fy - 5, "Q", "end", col, 10.5);
+    s += txt(laneQn + 4, fy - 5, "¬Q", "start", col, 10.5);
+    ffx += ffW + 56;
+  });
+  if(ffFns.length){
+    // gemeinsame Taktleitung
+    const clkX2 = ffFns.length ? (20 + (ffFns.length) * (ffW + 56)) : 100;
+    s += line(30, clockY, clkX2, clockY, "#1e293b", 1.4);
+    s += txt(20, clockY + 4, "C", "end", "#0f172a");
+  }
+
+  // Rail-Verlängerung nach links zu den FF-Feedback-Lanes ist oben schon gezeichnet (leftPad-12)
+  return s + "</svg>";
+}
+
+/* ════════ Schritt 6: Simulation ════════ */
+function stepSimulation(rows, cls, startZ, seq){
+  const sim = simulate(state.nx, state.nz, rows, startZ, seq);
+  const moore = cls.type === "moore" || cls.type === "medvedev";
+
+  let b = "<p>Start: z(1) = <b>" + bits(startZ, state.nz) + "</b>. " +
+    (moore ? "y(k) hängt nur von z(k) ab (Moore)" : "y(k) hängt von z(k) und x(k) ab (Mealy)") +
+    "; der Folgezustand wird mit der Taktflanke übernommen.</p>";
+
+  b += '<table class="wtab"><tr><th>Takt k</th><th>Zustand z(k)</th><th>Eingabe x(k)</th><th>Ausgabe y(k)</th><th>Folgezustand z(k+1)</th></tr>';
+  sim.trace.forEach((t, i) => {
+    const last = i === sim.trace.length - 1 && !sim.stopped;
+    b += "<tr>";
+    b += "<td>" + t.takt + "</td>";
+    b += "<td>" + bits(t.z, state.nz) + "</td>";
+    b += "<td>" + bits(t.x, state.nx) + "</td>";
+    b += "<td" + (last ? ' class="hl"' : "") + ">" + (t.y === null ? "−" : bits(t.y, state.ny)) + "</td>";
+    b += "<td>" + (t.zn === null ? "−" : bits(t.zn, state.nz)) + "</td>";
+    b += "</tr>";
+  });
+  b += "</table>";
+
+  if(sim.stopped){
+    b += '<div class="note warn">Abbruch im Takt ' + sim.stopped + ": der Übergang ist <b>undefiniert</b> (don't care in der Tabelle).</div>";
+  } else {
+    const lastT = sim.trace[sim.trace.length - 1];
+    b += "<p>➜ <b>Ausgabe y im " + lastT.takt + ". Takt = " + (lastT.y === null ? "−" : bits(lastT.y, state.ny)) + "</b>" +
+      (moore ? " (Zustand im " + lastT.takt + ". Takt: " + bits(lastT.z, state.nz) + ")" : "") +
+      ". Endzustand nach der Sequenz: " + bits(sim.endZ, state.nz) + ".</p>";
+  }
+  return step("Simulation der Eingabesequenz", b, "result");
+}
+
+/* ════════════════ Beispiele ════════════════ */
+const EXAMPLES = [
+  {
+    label: "Klausur SoSe21, Aufgabe 5 (Schaltung → Funktionen)",
+    apply(){
+      setDims(1, 2, 1); setMode("fn");
+      $("fz1").value = "~x z1 ~z0 | ~x z1 z0 | x ~z0 | x ~z1 z0";
+      $("fz0").value = "~x ~z1 z0 | ~x z1 z0 | x ~z1 ~z0 | x z1 z0";
+      $("fy0").value = "~z1 ~z0 | z1 ~z0";
+      $("inStart").value = "00";
+      $("inSeq").value = "0 0 0 1 1 0";   // Sequenz C
+    }
+  },
+  {
+    label: "Klausur SS2010, Aufgabe 2.1 (Moore, 3-Bit-Ausgabe, Graph)",
+    apply(){
+      setDims(1, 2, 3); setMode("graph");
+      $("inGraph").value = [
+        "# Moore-Automat: Ausgabe am Zustand",
+        "s0=00", "s1=01", "s2=10", "s3=11",
+        "s0: 010", "s1: 010", "s2: 111", "s3: 011",
+        "s0, 0 -> s2", "s0, 1 -> s1",
+        "s1, 0 -> s0", "s1, 1 -> s3",
+        "s2, 0 -> s0", "s2, 1 -> s1",
+        "s3, 0 -> s2", "s3, 1 -> s3"
+      ].join("\n");
+      $("inStart").value = "00"; $("inSeq").value = "";
+    }
+  },
+  {
+    label: "Klausur SS17, Aufgabe 5 (1 Flipflop, Medvedev)",
+    apply(){
+      setDims(1, 1, 1); setMode("fn");
+      $("fz0").value = "x ^ z";
+      $("fy0").value = "z";
+      $("inStart").value = "0"; $("inSeq").value = "1 1 0 1";
+    }
+  },
+  {
+    label: "Skript S. 141: umschaltbarer Gray-Code-Zähler",
+    apply(){
+      setDims(1, 2, 2); setMode("fn");
+      $("fz1").value = "(~z0 & x) | (z0 & ~x)";
+      $("fz0").value = "(~z1 & ~x) | (z1 & x)";
+      $("fy1").value = "z1";
+      $("fy0").value = "z0";
+      $("inStart").value = "00"; $("inSeq").value = "0 0 0 0";
+    }
+  },
+  {
+    label: "Skript S. 131: Selbsthalteschaltung (Mealy)",
+    apply(){
+      setDims(2, 1, 1); setMode("fn");
+      // x1 = Start, x0 = Stopp
+      $("fz0").value = "(x1 & ~x0) | (z & ~x0)";
+      $("fy0").value = "(x1 & ~x0) | (z & ~x0)";
+      $("inStart").value = "0"; $("inSeq").value = "10 00 01 00";
+    }
+  },
+  {
+    label: "Blatt 4: Getränkeautomat (Gray-Zähler, 3 Flaschen)",
+    apply(){
+      setDims(2, 2, 2); setMode("graph");
+      // x1 = Reset, x0 = Münze; y1 = Flasche, y0 = Geldrückgabe
+      // Flaschenzahl im Gray-Code: 3=10, 2=11, 1=01, 0=00
+      $("inGraph").value = [
+        "# Zustände: Flaschenzahl im Gray-Code (3=10, 2=11, 1=01, 0=00)",
+        "# Eingabe x1x0: x1=Reset, x0=Münze | Ausgabe y1y0: y1=Flasche, y0=Geld zurück",
+        "10, 00 -> 10 / 00",
+        "10, 01 -> 11 / 10",
+        "11, 00 -> 11 / 00",
+        "11, 01 -> 01 / 10",
+        "01, 00 -> 01 / 00",
+        "01, 01 -> 00 / 10",
+        "00, 00 -> 00 / 00",
+        "00, 01 -> 00 / 01",
+        "# Reset (auch bei gleichzeitigem Münzeinwurf): zurück auf 3 Flaschen",
+        "10, 1- -> 10 / 00",
+        "11, 1- -> 10 / 00",
+        "01, 1- -> 10 / 00",
+        "00, 1- -> 10 / 00"
+      ].join("\n");
+      $("inStart").value = "10";
+      $("inSeq").value = "01 01 01 01";
+    }
+  }
+];
+
+function setDims(nx, nz, ny){
+  $("selNx").value = nx; $("selNz").value = nz; $("selNy").value = ny;
+  readDims(); initEditModel(); renderFnFields(); renderEditTable();
+}
+function setMode(m){
+  document.querySelectorAll("#modeSeg button").forEach(x => x.classList.toggle("active", x.dataset.mode === m));
+  state.mode = m;
+  $("pgFn").classList.toggle("active", m === "fn");
+  $("pgTab").classList.toggle("active", m === "tab");
+  $("pgGraph").classList.toggle("active", m === "graph");
+}
+
+{
+  const sel = $("examples");
+  EXAMPLES.forEach((ex, i) => {
+    const o = document.createElement("option");
+    o.value = i; o.textContent = ex.label;
+    sel.appendChild(o);
+  });
+  sel.onchange = () => {
+    if(sel.value === "") return;
+    EXAMPLES[+sel.value].apply();
+    build();
+  };
+}
+
+/* ---------- Sonstige Events & Init ---------- */
+["inGraph", "inStart", "inSeq"].forEach(id => $(id).oninput = scheduleBuild);
+["chkKV", "chkPLA"].forEach(id => $(id).onchange = scheduleBuild);
+
+readDims();
+initEditModel();
+renderFnFields();
+renderEditTable();
+window.__katexReady = () => build();   // KaTeX lädt deferred — danach Formeln neu rendern
+EXAMPLES[0].apply();   // mit dem Klausurbeispiel starten
+build();
+</script>
+</body>
+</html>
